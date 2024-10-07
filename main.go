@@ -18,7 +18,7 @@ type Transaction struct {
 
 const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-func RandString(n int) string {
+func randString(n int) string {
 	b := make([]byte, n)
 	for i := range b {
 		b[i] = letters[rand.Int63()%int64(len(letters))]
@@ -26,25 +26,20 @@ func RandString(n int) string {
 	return string(b)
 }
 
-func GetRandomTransaction() Transaction {
+func getRandomTransaction() Transaction {
 	return Transaction{
 		Date:     time.Now(),
-		Title:    RandString(5),
-		Receiver: RandString(10),
+		Title:    randString(5),
+		Receiver: randString(10),
 		Value:    uint16(rand.Intn(100)),
 	}
 }
 
 var ctx = context.Background()
 
-func main() {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     "127.0.0.1:6379",
-		Password: "",
-		DB:       0,
-	})
+func sendTransactions(rdb *redis.Client, interval time.Duration) {
 	for {
-		transaction := GetRandomTransaction()
+		transaction := getRandomTransaction()
 		data, err := json.Marshal(transaction)
 		if err != nil {
 			log.Fatalf("Error while decoding json %v", err)
@@ -54,6 +49,15 @@ func main() {
 		if error != nil {
 			log.Fatalf("Something went wrong, %v", err)
 		}
-		time.Sleep(5 * time.Second)
+		time.Sleep(interval)
 	}
+}
+
+func main() {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "127.0.0.1:6379",
+		Password: "",
+		DB:       0,
+	})
+	sendTransactions(rdb, 10*time.Second)
 }
